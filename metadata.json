@@ -1,0 +1,6 @@
+{
+  "name": "Sakhi AI",
+  "description": "Voice-guided government scheme navigator for Indian women in all regional languages and dialects with secure private voice assistance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
