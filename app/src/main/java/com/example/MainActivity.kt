@@ -1,8 +1,11 @@
 package com.example
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -58,6 +61,19 @@ fun MainAppContent(viewModel: SakhiViewModel) {
 
     var showLanguageSheet by remember { mutableStateOf(false) }
 
+    // System SpeechRecognizer Intent Fallback Launcher
+    val systemSpeechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenMatches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            val spokenText = spokenMatches?.firstOrNull()?.trim()
+            if (!spokenText.isNullOrBlank()) {
+                viewModel.submitVoiceQuery(spokenText)
+            }
+        }
+    }
+
     // Audio recording permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -93,6 +109,7 @@ fun MainAppContent(viewModel: SakhiViewModel) {
                 bottomBar = {
                     SakhiBottomBar(
                         currentScreen = currentScreen,
+                        selectedLanguage = selectedLanguage,
                         onNavigate = { viewModel.navigateTo(it) },
                         onStartCall = { viewModel.startVoiceCall() }
                     )
@@ -117,6 +134,7 @@ fun MainAppContent(viewModel: SakhiViewModel) {
                 bottomBar = {
                     SakhiBottomBar(
                         currentScreen = currentScreen,
+                        selectedLanguage = selectedLanguage,
                         onNavigate = { viewModel.navigateTo(it) },
                         onStartCall = { viewModel.startVoiceCall() }
                     )
@@ -129,7 +147,15 @@ fun MainAppContent(viewModel: SakhiViewModel) {
                 ) {
                     HomeScreen(
                         viewModel = viewModel,
-                        onOpenLanguageSheet = { showLanguageSheet = true }
+                        onOpenLanguageSheet = { showLanguageSheet = true },
+                        onLaunchSystemSpeechRecognizer = {
+                            val intent = viewModel.voiceManager.createSpeechIntent(selectedLanguage)
+                            try {
+                                systemSpeechLauncher.launch(intent)
+                            } catch (e: Exception) {
+                                viewModel.startListeningForQuery()
+                            }
+                        }
                     )
                 }
             }

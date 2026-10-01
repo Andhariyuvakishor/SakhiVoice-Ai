@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.IndianLanguage
+import com.example.data.model.UiTextProvider
 import com.example.ui.theme.SakhiMarigoldContainer
 import com.example.ui.theme.SakhiRoseLight
 import com.example.ui.theme.SakhiRosePrimary
@@ -50,6 +51,7 @@ fun LanguageSelectorSheet(
     onPreviewAudio: (IndianLanguage) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val ui = UiTextProvider.get(currentLanguage)
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -69,13 +71,13 @@ fun LanguageSelectorSheet(
             ) {
                 Column {
                     Text(
-                        text = "अपनी भाषा चुनें",
+                        text = "Choose App Text & Voice Language",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = SakhiRosePrimary
                     )
                     Text(
-                        text = "Select Your Regional Language / Dialect",
+                        text = ui.selectLanguageTitle + " • " + ui.selectLanguageSub,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

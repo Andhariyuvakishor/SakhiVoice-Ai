@@ -75,4 +75,27 @@ class ExampleRobolectricTest {
             assertTrue(scheme.voiceAudioText.isNotBlank())
         }
     }
+
+    @Test
+    fun `test scheme localized speech text generation for all languages`() {
+        val scheme = schemeRepository.getAllSchemes().first()
+        IndianLanguage.entries.forEach { lang ->
+            val speech = scheme.getLocalizedSpeechText(lang)
+            assertTrue(speech.isNotBlank())
+            assertTrue(speech.contains(scheme.helplineNumber))
+        }
+    }
+
+    @Test
+    fun `test all indian languages have complete localized ui strings`() {
+        IndianLanguage.entries.forEach { lang ->
+            val ui = com.example.data.model.UiTextProvider.get(lang)
+            assertTrue(ui.home.isNotBlank())
+            assertTrue(ui.secureCall.isNotBlank())
+            assertTrue(ui.saved.isNotBlank())
+            assertTrue(ui.speakInDialect.isNotBlank())
+            assertTrue(ui.schemeDetailsTitle.isNotBlank())
+            assertTrue(ui.selectLanguageTitle.isNotBlank())
+        }
+    }
 }

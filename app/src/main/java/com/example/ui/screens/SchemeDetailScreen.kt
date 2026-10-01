@@ -63,6 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GovernmentScheme
+import com.example.data.model.UiTextProvider
 import com.example.ui.SakhiViewModel
 import com.example.ui.theme.SakhiCallActiveGreen
 import com.example.ui.theme.SakhiMarigoldContainer
@@ -86,6 +87,8 @@ fun SchemeDetailScreen(
     }
 
     val context = LocalContext.current
+    val selectedLanguage by viewModel.selectedLanguage.collectAsState()
+    val ui = UiTextProvider.get(selectedLanguage)
     val isSpeaking by viewModel.voiceManager.isSpeaking.collectAsState()
     val bookmarks by viewModel.bookmarkedSchemes.collectAsState()
     val bookmarkEntry = bookmarks.firstOrNull { it.schemeId == scheme.id }
@@ -184,9 +187,9 @@ fun SchemeDetailScreen(
                             color = SakhiSuccessGreen
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                        // Audio voice button
+                        // Audio voice read-back button
                         Button(
                             onClick = {
                                 if (isSpeaking) {
@@ -196,24 +199,33 @@ fun SchemeDetailScreen(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = SakhiRosePrimary,
+                                containerColor = if (isSpeaking) Color(0xFFBE123C) else SakhiRosePrimary,
                                 contentColor = Color.White
                             ),
                             shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            modifier = Modifier.testTag("detail_listen_audio_button")
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("detail_listen_audio_button")
                         ) {
                             Icon(
                                 imageVector = if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp,
                                 contentDescription = "Play Audio",
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isSpeaking) "आवाज़ रोकें" else "पूरी योजना अपनी भाषा में सुनें",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(horizontalAlignment = Alignment.Start) {
+                                Text(
+                                    text = if (isSpeaking) ui.stopAudio else "${ui.listenFullScheme} (${selectedLanguage.nativeName})",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = if (isSpeaking) "Tap to pause speech" else "Voice read-back in ${selectedLanguage.englishName}",
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
                         }
                     }
                 }
@@ -234,7 +246,7 @@ fun SchemeDetailScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "योजना का विवरण",
+                            text = ui.schemeDetailsTitle,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = SakhiRoseDark
@@ -278,7 +290,7 @@ fun SchemeDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "कागजात की जांच (आपके पास क्या है?)",
+                                text = ui.docChecklistTitle,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = SakhiTealTertiary
@@ -286,7 +298,7 @@ fun SchemeDetailScreen(
                         }
 
                         Text(
-                            text = "कागजात पर टिक लगाएं ताकि याद रहे कि क्या तैयार है:",
+                            text = ui.docChecklistSub,
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
@@ -348,7 +360,7 @@ fun SchemeDetailScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "किसे मिलेगा लाभ? (पात्रता)",
+                            text = ui.whoIsEligibleTitle,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = SakhiRoseDark
@@ -399,7 +411,7 @@ fun SchemeDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "गांव में कहाँ जाना है?",
+                                text = ui.whereToGoVillageTitle,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = SakhiMarigoldDark
@@ -436,7 +448,7 @@ fun SchemeDetailScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "सरकारी हेल्पलाइन",
+                                text = ui.govtHelplineTitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -469,7 +481,7 @@ fun SchemeDetailScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("फोन करें", fontWeight = FontWeight.Bold)
+                            Text(ui.callHelplineBtn, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

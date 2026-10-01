@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.IndianLanguage
+import com.example.data.model.UiTextProvider
 import com.example.ui.theme.SakhiEmergencyRed
 import com.example.ui.theme.SakhiMarigoldContainer
 import com.example.ui.theme.SakhiRoseDark
@@ -58,6 +59,7 @@ fun SakhiTopBar(
     onToggleDiscreetMode: () -> Unit
 ) {
     val context = LocalContext.current
+    val ui = UiTextProvider.get(selectedLanguage)
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -74,7 +76,7 @@ fun SakhiTopBar(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "स",
+                            text = selectedLanguage.nativeName.take(1),
                             color = Color.White,
                             fontWeight = FontWeight.Black,
                             fontSize = 20.sp
@@ -86,7 +88,7 @@ fun SakhiTopBar(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "सखी AI",
+                                text = "Sakhi AI",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = SakhiRoseDark
@@ -99,7 +101,7 @@ fun SakhiTopBar(
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = "नारी सशक्तिकरण",
+                                    text = ui.womenEmpowerment,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = SakhiRoseDark
@@ -107,7 +109,7 @@ fun SakhiTopBar(
                             }
                         }
                         Text(
-                            text = "आपकी अपनी आवाज़ गाइड",
+                            text = ui.appSubtitle,
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -60,6 +60,8 @@ fun BookmarksScreen(viewModel: SakhiViewModel) {
         viewModel.navigateBack()
     }
 
+    val selectedLanguage by viewModel.selectedLanguage.collectAsState()
+    val ui = com.example.data.model.UiTextProvider.get(selectedLanguage)
     val bookmarks by viewModel.bookmarkedSchemes.collectAsState()
 
     Scaffold(
@@ -68,13 +70,13 @@ fun BookmarksScreen(viewModel: SakhiViewModel) {
                 title = {
                     Column {
                         Text(
-                            text = "सहेजी गई योजनाएं (ऑफलाइन)",
+                            text = ui.savedSchemesTitle,
                             fontWeight = FontWeight.Bold,
                             fontSize = 17.sp,
                             color = SakhiRoseDark
                         )
                         Text(
-                            text = "इंटरनेट न होने पर भी देखें",
+                            text = ui.offlineSub,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -115,14 +117,14 @@ fun BookmarksScreen(viewModel: SakhiViewModel) {
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "अभी कोई योजना सहेजी नहीं गई है",
+                        text = ui.noSavedSchemes,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = SakhiRoseDark
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "किसी भी योजना के कार्ड पर बुकमार्क आइकन दबाकर उसे बिना इंटरनेट के देखने के लिए सुरक्षित करें।",
+                        text = ui.noSavedSub,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -156,7 +158,7 @@ fun BookmarksScreen(viewModel: SakhiViewModel) {
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "यह जानकारी आपके फोन में पूरी तरह सुरक्षित और ऑफलाइन उपलब्ध है।",
+                                text = ui.offlineSafeBadge,
                                 fontSize = 12.sp,
                                 color = SakhiTealTertiary,
                                 fontWeight = FontWeight.Medium

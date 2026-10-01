@@ -37,7 +37,7 @@ class SakhiViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentScreen = MutableStateFlow<ScreenDestination>(ScreenDestination.Home)
     val currentScreen: StateFlow<ScreenDestination> = _currentScreen.asStateFlow()
 
-    private val _selectedLanguage = MutableStateFlow(IndianLanguage.HINDI)
+    private val _selectedLanguage = MutableStateFlow(IndianLanguage.ENGLISH)
     val selectedLanguage: StateFlow<IndianLanguage> = _selectedLanguage.asStateFlow()
 
     private val _userQueryText = MutableStateFlow("")
@@ -142,7 +142,9 @@ class SakhiViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun speakScheme(scheme: GovernmentScheme) {
-        voiceManager.speak(scheme.voiceAudioText)
+        val speechText = scheme.getLocalizedSpeechText(_selectedLanguage.value)
+        voiceManager.setLanguage(_selectedLanguage.value)
+        voiceManager.speak(speechText)
     }
 
     // Call Screen Management

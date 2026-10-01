@@ -22,6 +22,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.IndianLanguage
+import com.example.data.model.UiTextProvider
 import com.example.ui.ScreenDestination
 import com.example.ui.theme.SakhiCallActiveGreen
 import com.example.ui.theme.SakhiEmergencyRed
@@ -32,10 +34,12 @@ import com.example.ui.theme.SakhiRosePrimary
 @Composable
 fun SakhiBottomBar(
     currentScreen: ScreenDestination,
+    selectedLanguage: IndianLanguage,
     onNavigate: (ScreenDestination) -> Unit,
     onStartCall: () -> Unit
 ) {
     val context = LocalContext.current
+    val ui = UiTextProvider.get(selectedLanguage)
 
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -48,13 +52,13 @@ fun SakhiBottomBar(
             icon = {
                 Icon(
                     imageVector = Icons.Default.Home,
-                    contentDescription = "Home",
+                    contentDescription = ui.home,
                     modifier = Modifier.size(24.dp)
                 )
             },
             label = {
                 Text(
-                    text = "होम",
+                    text = ui.home,
                     fontSize = 11.sp,
                     fontWeight = if (currentScreen is ScreenDestination.Home) FontWeight.Bold else FontWeight.Normal
                 )
@@ -74,14 +78,14 @@ fun SakhiBottomBar(
             icon = {
                 Icon(
                     imageVector = Icons.Default.PhoneInTalk,
-                    contentDescription = "Secure Call",
+                    contentDescription = ui.secureCall,
                     tint = SakhiCallActiveGreen,
                     modifier = Modifier.size(24.dp)
                 )
             },
             label = {
                 Text(
-                    text = "सुरक्षित कॉल",
+                    text = ui.secureCall,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = SakhiCallActiveGreen
@@ -102,13 +106,13 @@ fun SakhiBottomBar(
             icon = {
                 Icon(
                     imageVector = Icons.Default.Bookmark,
-                    contentDescription = "Saved Schemes",
+                    contentDescription = ui.saved,
                     modifier = Modifier.size(24.dp)
                 )
             },
             label = {
                 Text(
-                    text = "सहेजी गई",
+                    text = ui.saved,
                     fontSize = 11.sp,
                     fontWeight = if (currentScreen is ScreenDestination.Bookmarks) FontWeight.Bold else FontWeight.Normal
                 )
@@ -133,14 +137,14 @@ fun SakhiBottomBar(
             icon = {
                 Icon(
                     imageVector = Icons.Default.Emergency,
-                    contentDescription = "Helpline 181",
+                    contentDescription = ui.sos,
                     tint = SakhiEmergencyRed,
                     modifier = Modifier.size(24.dp)
                 )
             },
             label = {
                 Text(
-                    text = "181 SOS",
+                    text = ui.sos,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = SakhiEmergencyRed

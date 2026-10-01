@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.Button
@@ -73,8 +74,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GovernmentScheme
 import com.example.data.model.IndianLanguage
+import com.example.data.model.UiStrings
+import com.example.data.model.UiTextProvider
 import com.example.ui.SakhiViewModel
 import com.example.ui.ScreenDestination
+import com.example.ui.components.VoiceSpeechDialog
 import com.example.ui.components.VoiceWaveAnimation
 import com.example.ui.theme.SakhiCallActiveGreen
 import com.example.ui.theme.SakhiMarigoldContainer
@@ -90,9 +94,11 @@ import com.example.ui.theme.SakhiTealTertiary
 @Composable
 fun HomeScreen(
     viewModel: SakhiViewModel,
-    onOpenLanguageSheet: () -> Unit
+    onOpenLanguageSheet: () -> Unit,
+    onLaunchSystemSpeechRecognizer: () -> Unit = {}
 ) {
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
+    val ui = UiTextProvider.get(selectedLanguage)
     val isListening by viewModel.voiceManager.isListening.collectAsState()
     val isSpeaking by viewModel.voiceManager.isSpeaking.collectAsState()
     val rmsAmplitude by viewModel.voiceManager.rmsAmplitude.collectAsState()
@@ -101,7 +107,10 @@ fun HomeScreen(
     val userQueryText by viewModel.userQueryText.collectAsState()
     val suggestedSchemes by viewModel.suggestedSchemes.collectAsState()
     val bookmarks by viewModel.bookmarkedSchemes.collectAsState()
+    val livePartialSpeech by viewModel.voiceManager.livePartialSpeech.collectAsState()
+    val speechErrorMessage by viewModel.voiceManager.speechErrorMessage.collectAsState()
 
+    var showVoiceDialog by remember { mutableStateOf(false) }
     var manualTextInput by remember { mutableStateOf("") }
     var showManualTextEntry by remember { mutableStateOf(false) }
 
@@ -112,6 +121,67 @@ fun HomeScreen(
         contentPadding = PaddingValues(top = 12.dp, bottom = 90.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Prominent Choose App Language Bar
+        item {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = SakhiRoseLight.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenLanguageSheet() }
+                    .testTag("choose_app_language_banner")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(SakhiRosePrimary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Translate,
+                                contentDescription = "Language",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "App Text Language: ${selectedLanguage.nativeName} (${selectedLanguage.englishName})",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SakhiRoseDark
+                            )
+                            Text(
+                                text = "Tap here to change language anytime",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    FilledTonalButton(
+                        onClick = onOpenLanguageSheet,
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = SakhiRosePrimary,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text("Change", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
         // Welcome & Language audio greeting bar
         item {
             ElevatedCard(
@@ -133,7 +203,7 @@ fun HomeScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "बोलिए अपनी बोली में • ${selectedLanguage.nativeName}",
+                                text = "${ui.speakInDialect} • ${selectedLanguage.nativeName}",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = SakhiMarigoldDark
@@ -141,7 +211,7 @@ fun HomeScreen(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "शून्य डिजिटल ज्ञान की आवश्यकता। सिर्फ बोलकर योजना जानें।",
+                            text = ui.zeroLiteracySub,
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -164,7 +234,7 @@ fun HomeScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isSpeaking) "रोकें" else "सुनिए",
+                            text = if (isSpeaking) ui.stop else ui.listen,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
@@ -183,53 +253,54 @@ fun HomeScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = if (isListening) "सुन रही हूँ... अपनी बात कहिए" else "बटन दबाकर बोलिए",
+                        text = if (isListening) ui.listeningState else ui.idleState,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isListening) SakhiRosePrimary else SakhiRoseDark
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isListening) Color(0xFFBE123C) else SakhiRoseDark,
+                        fontSize = 20.sp
                     )
+
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
                         text = selectedLanguage.zeroLiteracyAudioPrompt,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 13.sp
+                        color = Color(0xFF4A3B32),
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
                     )
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     // Pulse Voice Wave & Big Mic Button
                     Box(
                         modifier = Modifier
-                            .size(170.dp),
+                            .size(180.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         VoiceWaveAnimation(
                             isActive = isListening || isSpeaking,
                             amplitude = rmsAmplitude,
-                            size = 170.dp
+                            size = 180.dp
                         )
 
                         // Central Interactive Mic Button (Accessibility Touch Target > 48dp)
                         Surface(
                             modifier = Modifier
-                                .size(96.dp)
+                                .size(100.dp)
                                 .clip(CircleShape)
                                 .clickable {
-                                    if (isListening) {
-                                        viewModel.stopListening()
-                                    } else {
-                                        viewModel.startListeningForQuery()
-                                    }
+                                    showVoiceDialog = true
+                                    viewModel.startListeningForQuery()
                                 }
                                 .testTag("main_mic_button"),
                             shape = CircleShape,
@@ -241,36 +312,36 @@ fun HomeScreen(
                                     imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
                                     contentDescription = "Tap to speak in your regional language",
                                     tint = Color.White,
-                                    modifier = Modifier.size(46.dp)
+                                    modifier = Modifier.size(48.dp)
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Spoken user text feedback
                     if (userQueryText.isNotBlank()) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = SakhiTealContainer.copy(alpha = 0.5f),
+                            color = SakhiTealContainer.copy(alpha = 0.6f),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Mic,
                                     contentDescription = null,
                                     tint = SakhiTealTertiary,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "\"$userQueryText\"",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = SakhiTealTertiary
                                 )
                             }
@@ -323,7 +394,7 @@ fun HomeScreen(
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "सखी सुरक्षित आवाज़ कॉल",
+                                    text = ui.secureCallCardTitle,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp,
                                     color = Color(0xFF0F3B37)
@@ -337,7 +408,7 @@ fun HomeScreen(
                                 )
                             }
                             Text(
-                                text = "फोन कॉल की तरह सीधे बोलकर बात करें • 256-bit गुप्त लाइन",
+                                text = ui.secureCallCardSub,
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -353,7 +424,7 @@ fun HomeScreen(
                         shape = RoundedCornerShape(14.dp),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        Text("कॉल करें", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(ui.callNow, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }
@@ -368,13 +439,13 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "आम बोलचाल में पूछें (Tap to Ask)",
+                        text = "${ui.tapToAskTitle} (Tap to Ask)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${selectedLanguage.nativeName} में",
+                        text = selectedLanguage.nativeName,
                         style = MaterialTheme.typography.bodySmall,
                         color = SakhiRosePrimary,
                         fontWeight = FontWeight.Bold
@@ -426,16 +497,17 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("advice_card"),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = SakhiRoseLight.copy(alpha = 0.45f)
+                    containerColor = Color(0xFFFFFDFC)
                 ),
-                border = CardDefaults.outlinedCardBorder().copy(brush = Brush.linearGradient(listOf(SakhiRosePrimary.copy(alpha = 0.3f), SakhiMarigoldSecondary.copy(alpha = 0.3f))))
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = CardDefaults.outlinedCardBorder().copy(brush = Brush.linearGradient(listOf(SakhiRosePrimary.copy(alpha = 0.4f), SakhiMarigoldSecondary.copy(alpha = 0.4f))))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(18.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -445,25 +517,25 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(34.dp)
                                     .clip(CircleShape)
                                     .background(SakhiRosePrimary),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("स", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text(selectedLanguage.nativeName.take(1), color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "सखी का मार्गदर्शन",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
+                                text = ui.sakhiGuidanceTitle,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 16.sp,
                                 color = SakhiRoseDark
                             )
                         }
 
                         IconButton(
                             onClick = { viewModel.repeatCurrentAdvice() },
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(38.dp)
                         ) {
                             Icon(
                                 imageVector = if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp,
@@ -473,7 +545,7 @@ fun HomeScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     if (isLoading) {
                         Row(
@@ -481,14 +553,15 @@ fun HomeScreen(
                             modifier = Modifier.padding(vertical = 12.dp)
                         ) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(22.dp),
+                                strokeWidth = 2.5.dp,
                                 color = SakhiRosePrimary
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "सखी विचार कर रही है...",
-                                fontSize = 13.sp,
+                                text = ui.thinking,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -496,9 +569,10 @@ fun HomeScreen(
                         Text(
                             text = sakhiResponse,
                             style = MaterialTheme.typography.bodyMedium,
-                            fontSize = 14.sp,
-                            lineHeight = 21.sp,
-                            color = SakhiRoseDark
+                            fontSize = 15.sp,
+                            lineHeight = 23.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color(0xFF261219)
                         )
                     }
                 }
@@ -513,7 +587,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "प्रमुख सरकारी योजनाएं (${suggestedSchemes.size})",
+                    text = "${ui.popularSchemesTitle} (${suggestedSchemes.size})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -525,6 +599,7 @@ fun HomeScreen(
             val isBookmarked = bookmarks.any { it.schemeId == scheme.id }
             SchemeSummaryCard(
                 scheme = scheme,
+                ui = ui,
                 isBookmarked = isBookmarked,
                 onBookmarkToggle = { viewModel.toggleBookmark(scheme, isBookmarked) },
                 onSpeakScheme = { viewModel.speakScheme(scheme) },
@@ -534,11 +609,33 @@ fun HomeScreen(
             )
         }
     }
+
+    if (showVoiceDialog) {
+        VoiceSpeechDialog(
+            language = selectedLanguage,
+            isListening = isListening,
+            rmsAmplitude = rmsAmplitude,
+            livePartialText = livePartialSpeech,
+            errorMessage = speechErrorMessage,
+            onStartListening = { viewModel.startListeningForQuery() },
+            onStopListening = { viewModel.stopListening() },
+            onSubmitVoiceQuery = { query ->
+                viewModel.submitVoiceQuery(query)
+                showVoiceDialog = false
+            },
+            onDismissRequest = {
+                viewModel.stopListening()
+                showVoiceDialog = false
+            },
+            onLaunchSystemSpeechRecognizer = onLaunchSystemSpeechRecognizer
+        )
+    }
 }
 
 @Composable
 fun SchemeSummaryCard(
     scheme: GovernmentScheme,
+    ui: UiStrings,
     isBookmarked: Boolean,
     onBookmarkToggle: () -> Unit,
     onSpeakScheme: () -> Unit,
@@ -591,17 +688,33 @@ fun SchemeSummaryCard(
                     )
                 }
 
-                Row {
-                    IconButton(
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalButton(
                         onClick = onSpeakScheme,
-                        modifier = Modifier.size(36.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = SakhiRoseLight.copy(alpha = 0.7f),
+                            contentColor = SakhiRosePrimary
+                        ),
+                        modifier = Modifier.testTag("speak_scheme_${scheme.id}")
                     ) {
                         Icon(
                             imageVector = Icons.Default.VolumeUp,
                             contentDescription = "Speak Scheme",
+                            modifier = Modifier.size(16.dp),
                             tint = SakhiRosePrimary
                         )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = ui.listen,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SakhiRosePrimary
+                        )
                     }
+
+                    Spacer(modifier = Modifier.width(4.dp))
 
                     IconButton(
                         onClick = onBookmarkToggle,
@@ -662,14 +775,14 @@ fun SchemeSummaryCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "आवेदन: ${scheme.whereToApply.take(28)}...",
+                    text = "${ui.whereToApplyPrefix}: ${scheme.whereToApply.take(28)}...",
                     fontSize = 11.sp,
                     color = SakhiRosePrimary,
                     fontWeight = FontWeight.SemiBold
                 )
 
                 Text(
-                    text = "पूरी जानकारी →",
+                    text = ui.fullDetails,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = SakhiRoseDark

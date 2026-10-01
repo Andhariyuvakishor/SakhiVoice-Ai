@@ -67,6 +67,7 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
     }
 
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
+    val ui = com.example.data.model.UiTextProvider.get(selectedLanguage)
     val callDuration by viewModel.callDurationSeconds.collectAsState()
     val isMuted by viewModel.isCallMuted.collectAsState()
     val isListening by viewModel.voiceManager.isListening.collectAsState()
@@ -123,7 +124,7 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "256-bit एन्क्रिप्टेड सुरक्षित कॉल",
+                            text = ui.encryptedCallHeader,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -153,7 +154,7 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (isRuralOptimized) "ग्रामीण 2G/3G नेटवर्क मोड सक्रिय" else "मानक नेटवर्क",
+                        text = if (isRuralOptimized) ui.ruralNetworkActive else "Network OK",
                         fontSize = 11.sp,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -184,7 +185,7 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
-                                text = "सखी",
+                                text = "Sakhi",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color.White
@@ -197,9 +198,9 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
 
                 Text(
                     text = when {
-                        isSpeaking -> "सखी बोल रही हैं..."
-                        isListening -> "सखी आपकी बात सुन रही हैं..."
-                        else -> "माइक दबाकर अपनी बोली में बोलिए"
+                        isSpeaking -> ui.sakhiSpeakingStatus
+                        isListening -> ui.sakhiListeningStatus
+                        else -> ui.tapToSpeakInCall
                     },
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
@@ -226,7 +227,7 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
                 ) {
                     if (userQueryText.isNotBlank()) {
                         Text(
-                            text = "आपने कहा: \"$userQueryText\"",
+                            text = "${ui.youSaid}: \"$userQueryText\"",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFFFFDF78)
@@ -264,7 +265,7 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "दोबारा सुनें",
+                                    text = ui.listenAgain,
                                     fontSize = 12.sp,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
@@ -317,7 +318,7 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
                 // Mute
                 CallActionButton(
                     icon = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
-                    label = if (isMuted) "अनम्यूट" else "म्यूट",
+                    label = if (isMuted) ui.unmuteLabel else ui.muteLabel,
                     isActive = isMuted,
                     onClick = { viewModel.toggleCallMute() },
                     testTag = "call_mute_toggle"
@@ -326,7 +327,7 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
                 // Speakerphone
                 CallActionButton(
                     icon = if (isSpeakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeDown,
-                    label = if (isSpeakerOn) "स्पीकर ऑन" else "ईयरपीस",
+                    label = if (isSpeakerOn) ui.speakerOnLabel else ui.earpieceLabel,
                     isActive = isSpeakerOn,
                     onClick = { viewModel.voiceManager.toggleSpeakerphone() },
                     testTag = "call_speaker_toggle"
@@ -335,7 +336,7 @@ fun VoiceCallScreen(viewModel: SakhiViewModel) {
                 // Discreet Safety Disguise (Calculator Switch)
                 CallActionButton(
                     icon = Icons.Default.Calculate,
-                    label = "गोपनीय पर्दा",
+                    label = ui.disguiseLabel,
                     isActive = false,
                     onClick = { viewModel.activateEmergencyDisguise() },
                     testTag = "call_discreet_calc"
